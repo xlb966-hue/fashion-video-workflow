@@ -111,3 +111,11 @@ git push origin work
 ```
 
 当前工作分支为 `work`。`.gitignore` 已忽略依赖、构建结果、环境变量和测试产物。
+
+## 无法打开“网页预览”？
+
+详细操作与原因说明见 [网页预览指南](docs/PREVIEW.md)。云端的 `localhost:3000` 不是你电脑的地址，必须通过平台的端口转发访问。
+
+本项目已配置 GitHub Codespaces：在 **work** 分支点击 **Code → Codespaces → Create codespace on work**，启动后在 **Ports / 端口** 面板点击 **3000** 行的 **Open in Browser**。本地则运行 `npm ci && npm run dev`，打开 http://localhost:3000 。
+
+开发及生产启动默认明确监听 `0.0.0.0:3000`。服务运行后使用 `npm run preview:check` 检查依赖、首页与接口。Codex 云端任务的进程不等于持久托管；没有转发入口时使用 Codespaces 或本地预览。

@@ -1,0 +1,15 @@
+{
+  "name": "Fashion Video Studio",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-24-bookworm",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Fashion Video Studio",
+      "onAutoForward": "openBrowser",
+      "requireLocalPort": true,
+      "protocol": "http"
+    }
+  },
+  "postCreateCommand": "npm ci",
+  "postStartCommand": "bash .devcontainer/start-preview.sh"
+}

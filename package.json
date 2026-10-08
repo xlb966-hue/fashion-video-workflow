@@ -1,7 +1,33 @@
 {
-  "name": "fashion-video-studio", "version": "1.0.0", "private": true,
-  "scripts": {"dev":"next dev --hostname 0.0.0.0", "build":"next build", "start":"next start --hostname 0.0.0.0", "typecheck":"tsc --noEmit", "test":"tsx --test tests/*.test.ts", "test:e2e":"playwright test"},
-  "engines":{"node":">=22.13"},
-  "dependencies":{"next":"^16.0.0","react":"^19.2.0","react-dom":"^19.2.0","lucide-react":"^0.468.0"},
-  "devDependencies":{"typescript":"^5.9.0","@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","tailwindcss":"^4.1.0","@tailwindcss/postcss":"^4.1.0","tsx":"^4.20.0","@playwright/test":"^1.56.0"}
+  "name": "fashion-video-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0 --port 3000",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "preview:check": "node scripts/check-preview.mjs"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "tsx": "^4.20.0",
+    "@playwright/test": "^1.56.0"
+  }
 }
