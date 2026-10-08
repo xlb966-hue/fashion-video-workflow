@@ -1,80 +1,113 @@
-# 织映 · AI 服装视频制作项目
+# Fashion Video Studio
 
-第一阶段为中文视频策划工作台：上传服装参考图和人物脸部参考图，自动整理人物设定、服装细节、场景和 **5 个视频分镜**。暂不接入视频生成平台，为可灵、即梦及其他服务预留统一 API。
+中文 AI 女装视频工作流网页，基于 **Next.js App Router、TypeScript、Tailwind CSS**。第一阶段完成前期策划与导出，无需 API Key。
 
-## 功能
+## 已实现
 
-- JPG、PNG、WebP 上传、拖拽、预览、替换及移除，单张最大 5MB。
-- 视频风格、场景、画面比例与 15/30/60 秒时长设置。
-- 人物、服装、场景设定和五分镜草案；每个镜头包含时间、运镜、动作和生成提示词。
-- 所有方案字段可编辑，导出 JSON；桌面与手机布局。
-- 可选视觉 AI 分析；未配置密钥时使用明确标注的模板模式。
-- 可灵、即梦和自定义视频供应商适配器契约，提交与查询接口。
+- 服装和人物两个独立上传区：JPG、PNG、WEBP；缩略图、拖拽、删除和重新上传，单张最大 5 MB。
+- 可编辑人物 4 项、服装 6 项、场景 4 项结构化设定。默认是“待分析”，手动输入后标记“手动编辑”，未执行真实图片识别。
+- 15 秒、9:16 五镜头：全身站姿 0–3 秒、细节 3–5 秒、行走 5–9 秒、侧身 9–12 秒、收尾 12–15 秒。
+- 每镜头可编辑名称、时长、动作、摄影机、展示重点、中英文提示词和负面提示词。可复制单项或全部提示词。
+- 六项人物与服装一致性约束，按当前设定重新生成模板时写入中英文提示词。
+- 导出完整分镜 JSON、中英文提示词 TXT、Markdown 分镜规划文档。
+- 本浏览器自动保存文字草稿，刷新恢复；参考图片不持久化，不发送至外部服务。
+- 可灵、即梦、Sora 和其他服务统一适配接口；未接入时返回 HTTP 501，绝不显示虚假生成成功。
 
-## 安装与运行
+## 安装与启动
 
-需要 **Node.js 24+** 和 npm。
+需要 Node.js **22.13+**（已在 Node.js 24 上验证）及 npm。
 
 ```bash
+git clone -b work https://github.com/xlb966-hue/fashion-video-workflow.git
 cd fashion-video-workflow
 npm ci
-cp .env.example .env
+cp .env.example .env.local  # 可选，本阶段无需密钥
 npm run dev
 ```
 
-访问 **http://localhost:3000**。
+在桌面浏览器访问 **http://localhost:3000**。如果端口被占用：
 
 ```bash
-npm start       # 常规启动
-npm test        # 策划规则及 API 测试
-npm run check   # JavaScript 语法检查
+npm run dev -- --port 3001
 ```
 
-`npm run dev` 自动监测服务端代码修改，浏览器需刷新。更改 `.env` 后重启服务。Windows 可手动复制 `.env.example` 为 `.env`。依赖包括 Express 5、Helmet、express-rate-limit；测试使用 Node 内置测试工具和 Supertest，锁定版本见 `package-lock.json`。
+生产构建与预览：
 
-## AI 图片分析配置
+```bash
+npm run build
+npm start
+```
 
-在 `.env` 填写 `OPENAI_API_KEY`，可设置支持图片输入与 JSON 输出的 `OPENAI_MODEL`，默认 `gpt-4.1-mini`。密钥仅由服务端读取。运行环境须允许访问 `https://api.openai.com`，代理环境使用继承的网络代理。
+Next.js 自动读取 `.env.local`，修改后需重启。不要将未来服务商密钥放入 `NEXT_PUBLIC_` 变量。
 
-**没有密钥时不会识别图片内容**，仅按创作参数生成模板草案，人物外观和具体服装细节需要补充。启用 AI 后，服务器将两张图片传给模型，分析可见特征并生成五分镜；结果仍需人工核对。当前未配置真实密钥，未验证真实模型调用。
+## 推荐操作顺序
 
-图片保存在浏览器内存与本次请求中，不写入服务器磁盘。刷新会清空素材和结果，请先导出方案。请使用有权使用的参考素材。
+1. 上传两张参考图。
+2. 按图片填写人物、服装、场景信息；不要将“待分析”误认为模型识别结果。
+3. 勾选一致性要求。
+4. 点击“按当前设定重新生成”，获得五镜头模板；此操作覆盖镜头编辑。
+5. 按需编辑各镜头。中文手动设定会写入中文提示词；英文提示词为参考图导向的模板，**不会自动翻译中文自定义描述**，请手动补充英文。
+6. 检查总时长为 15 秒，复制提示词或导出三个格式。
+
+当前未实现真实视频播放、MP4 输出或合成。浏览器禁止剪贴板访问时，页面提示手动复制或导出 TXT。
 
 ## 项目结构
 
 ```text
-fashion-video-workflow/
-├── public/                   # 中文网页
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
-├── src/
-│   ├── app.js                # HTTP 路由、校验、安全响应头与限流
-│   ├── services/
-│   │   ├── planner.js        # 模板、参数和结果结构校验
-│   │   └── analysis.js       # 可选视觉 AI 策划
-│   └── providers/
-│       └── index.js          # 可灵、即梦、其他供应商预留适配器
-├── test/                     # 策划与接口测试
-├── docs/API.md               # API 契约和接入指南
-├── server.js                 # 服务入口
-├── .env.example
-├── .gitignore
-├── package.json
-├── package-lock.json
-└── README.md
+src/
+├── app/
+│   ├── page.tsx / layout.tsx / globals.css
+│   └── api/
+│       ├── analysis/route.ts
+│       └── video/
+│           ├── providers/route.ts
+│           └── tasks/route.ts / [provider]/[taskId]/route.ts
+├── components/
+│   ├── Studio.tsx             # 工作台与草稿
+│   ├── ImageUpload.tsx        # 文件校验与本地预览
+│   ├── AnalysisEditor.tsx     # 结构化分析编辑器
+│   └── ShotEditor.tsx         # 分镜与提示词编辑器
+├── lib/
+│   ├── workflow.ts            # 默认模板、时间轴、校验
+│   ├── export.ts              # JSON / TXT / Markdown
+│   └── providers.ts           # 视频服务适配器契约
+└── types/workflow.ts          # 工作流与任务类型
+tests/
+├── workflow.test.ts           # 基础规则与导出测试
+└── e2e/studio.spec.ts          # 浏览器交互与 API 测试
+docs/API.md
 ```
 
-## 视频服务扩展
+## 检查与测试
 
-详见 [API 接口说明](docs/API.md)。
+```bash
+npm run typecheck
+npm test
+npm run build
+npx playwright install chromium  # 首次运行浏览器测试时安装
+npm run test:e2e                 # 自动在 3100 端口启动生产预览
+```
 
-- `GET /api/video/providers`：列出供应商与配置状态。
-- `POST /api/video/tasks`：预留生成任务提交。
-- `GET /api/video/tasks/:provider/:taskId`：预留生成进度查询。
+基础测试覆盖默认分镜时间、一致性、导出、草稿校验和未接入供应商行为。浏览器测试覆盖上传、删除、结构化编辑、镜头编辑、刷新恢复、三种下载与真实状态 API。
 
-当前三类服务均未接入，有效生成请求明确返回 `501 PROVIDER_NOT_CONFIGURED`。后续实现供应商的 `submit` 和 `getTask`，可复用前端与路由契约。具体模型、鉴权与参数应依据各服务商官方文档实现。
+## 后续 API 接入
 
-## 当前边界
+详见 [API 文档](docs/API.md)。当前没有视觉或视频 API 调用，也不要求密钥。未来需要：
 
-本阶段不包含成片生成、拼接、素材持久化或用户账户。服务监听 `0.0.0.0:3000`，可通过 `PORT` 修改；适合本地开发。已提供请求大小限制、基础限流和安全响应头；公开部署需进一步加入认证、费用配额与任务存储。
+- 视觉模型：将 `api/analysis` 替换为真实图片分析，校验结果后才将状态改为 `ai`。
+- 视频模型：在 `lib/providers.ts` 实现 `VideoAdapter.submit/getTask`，依据最新官方文档转换服务商参数、处理任务状态。
+- 自动翻译：接入翻译/语言模型处理中文自定义设定。
+- 视频合成：真实单镜头生成后接入下载、校验和 MP4 拼接流程。
+
+第一阶段为本地策划工具。公开部署及真实付费生成前，应加入认证、额度、请求限流、私有素材存储、持久化任务和安全回调校验。
+
+## 提交到 GitHub
+
+```bash
+git status
+git add .
+git commit -m "Build Fashion Video Studio workflow application"
+git push origin work
+```
+
+当前工作分支为 `work`。`.gitignore` 已忽略依赖、构建结果、环境变量和测试产物。

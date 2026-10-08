@@ -1,24 +1,7 @@
 {
-  "name": "fashion-video-workflow",
-  "version": "0.1.0",
-  "description": "中文 AI 服装视频策划工作台，预留可灵、即梦与其他视频服务接口",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "node --use-env-proxy --env-file-if-exists=.env server.js",
-    "dev": "node --watch --use-env-proxy --env-file-if-exists=.env server.js",
-    "test": "node --test test/*.test.js",
-    "check": "node --check server.js && node --check src/app.js && node --check src/services/analysis.js && node --check public/app.js"
-  },
-  "engines": {
-    "node": ">=24"
-  },
-  "dependencies": {
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.7.1",
-    "helmet": "^8.3.0"
-  },
-  "devDependencies": {
-    "supertest": "^7.3.1"
-  }
+  "name": "fashion-video-studio", "version": "1.0.0", "private": true,
+  "scripts": {"dev":"next dev --hostname 0.0.0.0", "build":"next build", "start":"next start --hostname 0.0.0.0", "typecheck":"tsc --noEmit", "test":"tsx --test tests/*.test.ts", "test:e2e":"playwright test"},
+  "engines":{"node":">=22.13"},
+  "dependencies":{"next":"^16.0.0","react":"^19.2.0","react-dom":"^19.2.0","lucide-react":"^0.468.0"},
+  "devDependencies":{"typescript":"^5.9.0","@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","tailwindcss":"^4.1.0","@tailwindcss/postcss":"^4.1.0","tsx":"^4.20.0","@playwright/test":"^1.56.0"}
 }

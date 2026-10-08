@@ -1,78 +1,68 @@
-# API 接口说明
+# Fashion Video Studio API
 
-所有请求与响应使用 JSON；当前仅提供策划和视频服务扩展契约，不调用任何视频生成平台。
+第一阶段只提供结构化契约。不存在模拟视频成功结果，所有视频适配器 `configured: false`。接口不要求 API Key。
 
-## 图片分析与策划
+## 视觉分析
 
-`GET /api/health` → `{ "status": "ok" }`
-
-`GET /api/status` → `{ "mode": "template" }` 或 `{ "mode": "ai" }`。
-
-`POST /api/plan`：
+`GET /api/analysis`：
 
 ```json
-{
-  "clothing": "data:image/jpeg;base64,...",
-  "face": "data:image/png;base64,...",
-  "style": "极简高级",
-  "scene": "简约摄影棚",
-  "brief": "突出轻盈质感",
-  "ratio": "9:16",
-  "duration": 30
-}
+{"configured":false,"status":"pending","message":"尚未接入视觉模型，支持手动编辑，未执行图片识别"}
 ```
 
-图片支持 JPEG、PNG、WebP，每张不超过 5MB。`brief` 可为空；比例支持 `9:16`、`16:9`、`1:1`；时长支持 15、30、60 秒。成功响应：
+`POST /api/analysis` → HTTP **501**，`code: VISION_NOT_CONFIGURED`，`status: pending`。当前不处理或上传图片。
 
-```json
-{
-  "mode": "template",
-  "plan": {
-    "character": "人物设定",
-    "clothing": "服装细节",
-    "scene": "场景与氛围",
-    "shots": [
-      { "title": "氛围开场", "time": "0–6 秒", "camera": "远景 · 推进", "action": "人物走入", "prompt": "视频模型提示词" }
-    ]
-  }
-}
-```
+后续实现时使用 `Analysis`（`src/types/workflow.ts`）作为输出数据结构：
 
-这里为简洁仅展示一个镜头，实际返回恰好 5 个。没有配置 AI 密钥时返回模板，不会识别图片。
+- `person`: `face`, `hair`, `skin`, `expression`
+- `clothing`: `category`, `color`, `neckline`, `waist`, `fabric`, `accessories`
+- `scene`: `architecture`, `light`, `photography`, `palette`
 
-## 视频供应商预留接口
+真实模型返回并通过校验后才允许 `analysisStatus: ai`；失败或无配置保持 pending，用户输入标记 manual。
 
-`GET /api/video/providers` 返回 `kling`（可灵）、`jimeng`（即梦）、`custom`（其他服务）。当前全部 `configured: false`。
+## 视频供应商
+
+`GET /api/video/providers` 返回可灵 `kling`、即梦 `jimeng`、Sora `sora` 与其他 `custom`，每项包含 `id/name/configured`。
 
 `POST /api/video/tasks`：
 
-```json
+```typescript
 {
-  "provider": "kling",
-  "ratio": "9:16",
-  "plan": { "character": "...", "clothing": "...", "scene": "...", "shots": [] },
-  "referenceImages": { "clothing": "...", "face": "..." }
+  provider: 'kling' | 'jimeng' | 'sora' | 'custom';
+  workflow: Workflow; // 使用完整导出 JSON，五镜头总时长需为 15 秒
+  referenceImages?: { clothing?: string; person?: string };
 }
 ```
 
-提交时 `plan` 必须包含完整的五个镜头；上面的空数组仅是字段示意。当前有效请求返回 **HTTP 501**：
+当前使用本地预览，导出 JSON 不含图片二进制。后续接入服务时，应将 `referenceImages` 改为权限受控的素材引用；当前没有素材上传接口。请求体上限 256,000 字符，适用于策划文字，不适用于原始图片。
+
+有效请求返回 HTTP **501**：
 
 ```json
-{ "code": "PROVIDER_NOT_CONFIGURED", "error": "kling 视频生成服务尚未接入" }
+{"code":"PROVIDER_NOT_CONFIGURED","error":"kling 视频服务尚未接入，当前未创建生成任务","actualVideoGenerated":false}
 ```
 
-`GET /api/video/tasks/:provider/:taskId` 预留任务查询接口，当前同样返回 501，不创建虚假任务。
+`GET /api/video/tasks/:provider/:taskId`：预留查询接口，当前同样 501；未知服务 400。
 
-未来适配器成功提交后应返回 HTTP 202 和 `{ provider, taskId, status }`；查询返回 `{ provider, taskId, status, videoUrl?, error? }`。状态统一为 `queued`、`running`、`succeeded`、`failed`。
+后续真实任务契约：
 
-## 接入真实视频服务
+```typescript
+interface VideoTask {
+  source: 'real';
+  taskId: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  videoUrl?: string;
+  error?: string;
+}
+```
 
-1. 在 `src/providers/` 新建适配器，实现 `submit({ plan, ratio, referenceImages })` 和 `getTask(taskId)`。
-2. 在 `src/providers/index.js` 注册适配器。检查密钥与配置后设置 `configured`，仅在服务端读取凭证。
-3. 根据服务商最新官方文档转换提示词、参考图片、支持的比例和时长；不能假设可灵、即梦接口相同。
-4. 将跨镜头一致性设定加入各镜头提示词。供应商只支持单镜头时，需要任务编排与后续视频拼接层。
-5. 在真实接入前增加持久化任务存储、鉴权、幂等提交、额度控制与超时处理。若使用回调，应验证签名。
+适配器实现 `submit(input: VideoRequest): Promise<VideoTask>` 与 `getTask(taskId: string): Promise<VideoTask>`。真实提交后返回 202；只有官方任务查询确认并验证输出视频后才显示 succeeded。不得用固定模拟链接替代真实文件。
 
-## 通用错误
+各服务商分辨率、时长、参考图能力和鉴权不同，需要依照官方文档适配，不假设通用端点。跨镜头编排和 MP4 拼接属于后续独立流程。
 
-400：参数错误 / JSON 无效；413：请求过大；429：每 IP 每分钟最多 20 次 API 请求；501：视频服务未接入；502：AI 分析失败；500：内部错误。错误响应包含 `error`，部分带稳定的 `code`。
+## 错误状态
+
+- 400：未知服务、损坏的 JSON、工作流不完整或时长不符合 15 秒。
+- 413：策划请求过大。
+- 501：供应商 / 视觉服务尚未接入。
+- 502：未来真实供应商调用异常。

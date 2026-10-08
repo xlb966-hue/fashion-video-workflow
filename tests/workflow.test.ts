@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import { createWorkflow,generateShots,isWorkflow,timeRanges,totalDuration } from '../src/lib/workflow';
+import { exportJson,exportPrompts,exportDocument } from '../src/lib/export';
+import { providers,NotConfiguredError } from '../src/lib/providers';
+test('默认 15 秒 9:16 五个指定镜头与空待分析字段',()=>{const w=createWorkflow();assert.equal(w.analysisStatus,'pending');assert.deepEqual(w.shots.map(s=>s.duration),[3,2,4,3,3]);assert.deepEqual(timeRanges(w.shots),['0–3 秒','3–5 秒','5–9 秒','9–12 秒','12–15 秒']);assert.equal(totalDuration(w.shots),15);assert.equal(w.aspectRatio,'9:16');assert.equal(w.analysis.person.face,'');assert.ok(w.shots.every(s=>s.promptZh&&s.promptEn&&s.negative));});
+test('手动字段与一致性写入模板，关闭约束后不保留',()=>{const w=createWorkflow();w.analysis.clothing.color='奶油白，无图案';w.consistency.gait=false;const shots=generateShots(w.analysis,w.consistency);assert.match(shots[0].promptZh,/奶油白/);assert.match(shots[0].promptEn,/face and hairstyle/);assert.doesNotMatch(shots[0].promptEn,/Use a natural gait/);});
+test('三种导出保留五镜头、中英文提示词与真实状态',()=>{const w=createWorkflow();w.shots[0].promptZh='我的自定义提示';const json=JSON.parse(exportJson(w));assert.equal(json.actualVideoGenerated,false);assert.equal(json.shots.length,5);assert.match(exportPrompts(w),/我的自定义提示/);assert.match(exportPrompts(w),/English prompt/);assert.match(exportDocument(w),/待分析/);assert.match(exportDocument(w),/12–15 秒/);});
+test('草稿数据校验拒绝不完整和损坏内容',()=>{assert.ok(isWorkflow(createWorkflow()));assert.equal(isWorkflow({}),false);const w=createWorkflow();w.shots[0].duration=NaN;assert.equal(isWorkflow(w),false);assert.equal(isWorkflow(null),false);});
+test('所有预留视频服务均拒绝生成，不返回虚假任务',async()=>{for(const p of Object.values(providers)){assert.equal(p.configured,false);await assert.rejects(p.submit({provider:p.id,workflow:createWorkflow()}),NotConfiguredError);await assert.rejects(p.getTask('test'),NotConfiguredError);}});
